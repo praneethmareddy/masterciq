@@ -6,16 +6,22 @@ import re
 ciq_folder = "./ciq_files/"
 output_folder = "./output/"
 os.makedirs(output_folder, exist_ok=True)
+row_ciq_folder = os.path.join(output_folder, "row_ciqs")
+os.makedirs(row_ciq_folder, exist_ok=True)
 
-# Custom column lists for adding/removing
+# Custom column lists
 columns_to_add = ["extra_col1", "extra_col2"]  # Example additional columns to include
 columns_to_remove = ["x_type", "y_param"]  # Example columns to exclude
 
 # Define column groups to merge
 column_groups = {
-    "cellid": r'cellid\d+',    # Matches cellid1, cellid2, cellid3...
-    "cellname": r'cellname\d+' # Matches cellname1, cellname2, cellname3...
+    "cellid": r'cellid\d+',    
+    "cellname": r'cellname\d+' 
 }
+
+# Store CIQ summaries
+ciq_column_summary = {}
+row_ciq_column_summary = {}
 
 # Process all CIQs in the folder
 ciq_files = [file for file in os.listdir(ciq_folder) if file.endswith(".xlsx")]
@@ -23,46 +29,34 @@ ciq_files = [file for file in os.listdir(ciq_folder) if file.endswith(".xlsx")]
 for file in ciq_files:
     file_path = os.path.join(ciq_folder, file)
     df = pd.read_excel(file_path)
-    
+
+    # Store original column summary
+    ciq_column_summary[file] = list(df.columns)
+
     # Identify grouped columns
     matched_columns = {group: [col for col in df.columns if re.match(pattern, col, re.IGNORECASE)]
                        for group, pattern in column_groups.items()}
-    
-    # Check if any column groups are found
-    if not any(matched_columns.values()):
-        print(f"Skipping {file}: No relevant column groups detected.")
-        continue
 
-    # Stack relevant columns into a row-wise format
-    stacked_data = []
-    for _, row in df.iterrows():
-        new_rows = []
-        
-        # Generate row-wise entries for each group
-        for group, columns in matched_columns.items():
-            for col in columns:
-                if pd.notna(row[col]):
-                    new_row = {group: row[col]}  # Rename column dynamically
-                    new_rows.append(new_row)
+    # Create row-wise structure
+    row_columns = set(df.columns) - set(sum(matched_columns.values(), [])) - set(columns_to_remove)
+    row_columns.update(columns_to_add)
+    row_columns.update(column_groups.keys())  # Add merged column names
 
-        # Merge row-wise data with other relevant columns
-        for new_row in new_rows:
-            for existing_col in df.columns:
-                if existing_col not in sum(matched_columns.values(), []) + columns_to_remove:
-                    new_row[existing_col] = row[existing_col]
+    # Store row-wise column summary
+    row_ciq_column_summary[file] = list(row_columns)
 
-            stacked_data.append(new_row)
+    # Create new DataFrame with only row-wise columns
+    row_df = pd.DataFrame(columns=row_columns)
 
-    row_wise_df = pd.DataFrame(stacked_data)
+    # Save Row CIQ
+    row_ciq_path = os.path.join(row_ciq_folder, f"row_{file}")
+    row_df.to_excel(row_ciq_path, index=False)
 
-    # Add any extra columns
-    for extra_col in columns_to_add:
-        row_wise_df[extra_col] = None  # Empty column placeholder
+# Save Summary Sheets
+summary_df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in ciq_column_summary.items()]))
+summary_df.to_excel(os.path.join(output_folder, "ciq_summary.xlsx"), index=False)
 
-    # Save the row-wise transformed CIQ
-    output_file = os.path.join(output_folder, f"row_wise_{file}")
-    row_wise_df.to_excel(output_file, index=False)
+row_summary_df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in row_ciq_column_summary.items()]))
+row_summary_df.to_excel(os.path.join(output_folder, "row_ciq_summary.xlsx"), index=False)
 
-    print(f"Converted {file} to row-wise format and saved to {output_file}")
-
-print("\nAll applicable CIQs processed and converted successfully!")
+print("✅ Summary sheets and row-wise CIQs generated successfully!")
