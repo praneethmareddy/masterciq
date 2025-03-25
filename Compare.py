@@ -12,22 +12,34 @@ os.makedirs(output_folder, exist_ok=True)
 # Load the column names
 df = pd.read_csv(ciq_columns_csv)
 
-# Extract column names from the single-row CSV
+# Extract column names from each CIQ (columns stored row-wise)
 ciq_column_groups = {f"CIQ_{i+1}": set(df.iloc[:, i].dropna()) for i in range(df.shape[1])}
 
-# Pairwise comparison of common and unique columns
+# Pairwise comparison storage
 pairwise_comparison = []
+print("\nPAIRWISE CIQ COLUMN MAPPING:")
+
 for (ciq1, cols1), (ciq2, cols2) in itertools.combinations(ciq_column_groups.items(), 2):
     common_columns = cols1 & cols2
     unique_to_ciq1 = cols1 - cols2
     unique_to_ciq2 = cols2 - cols1
 
+    # Print pairwise mapping
+    print(f"\n{ciq1} Columns: {sorted(list(cols1))}")
+    print(f"{ciq2} Columns: {sorted(list(cols2))}")
+    print(f"Common Columns ({len(common_columns)}): {sorted(list(common_columns))}")
+    print(f"Unique to {ciq1} ({len(unique_to_ciq1)}): {sorted(list(unique_to_ciq1))}")
+    print(f"Unique to {ciq2} ({len(unique_to_ciq2)}): {sorted(list(unique_to_ciq2))}")
+
+    # Store in DataFrame format
     pairwise_comparison.append({
         "CIQ_1": ciq1, "CIQ_2": ciq2,
         "Common Columns Count": len(common_columns),
         "Unique to CIQ_1": len(unique_to_ciq1),
         "Unique to CIQ_2": len(unique_to_ciq2),
-        "Common Columns": ", ".join(common_columns)
+        "Common Columns": ", ".join(common_columns),
+        f"Unique to {ciq1}": ", ".join(unique_to_ciq1),
+        f"Unique to {ciq2}": ", ".join(unique_to_ciq2)
     })
 
 # Convert to DataFrame
@@ -51,10 +63,10 @@ plt.title("Pairwise Common Column Counts Across CIQs")
 plt.xlabel("CIQs")
 plt.ylabel("CIQs")
 
-# Save the heatmap image
+# Save and display the heatmap
 heatmap_path = os.path.join(output_folder, "common_columns_heatmap.png")
 plt.savefig(heatmap_path)
 plt.show()
 
-print(f"Pairwise comparison saved to {pairwise_csv_path}")
+print(f"\nPairwise comparison saved to {pairwise_csv_path}")
 print(f"Heatmap saved to {heatmap_path}")
