@@ -10,8 +10,8 @@ row_ciq_folder = os.path.join(output_folder, "row_ciqs")
 os.makedirs(row_ciq_folder, exist_ok=True)
 
 # Custom column lists
-columns_to_add = ["extra_col1", "extra_col2"]  # Example additional columns to include
-columns_to_remove = ["x_type", "y_param"]  # Example columns to exclude
+columns_to_add = ["extra_col1", "extra_col2"]  # Additional columns
+columns_to_remove = ["x_type", "y_param"]  # Columns to exclude
 
 # Define column groups to merge
 column_groups = {
@@ -45,18 +45,18 @@ for file in ciq_files:
     # Store row-wise column summary
     row_ciq_column_summary[file] = list(row_columns)
 
-    # Create new DataFrame with only row-wise columns
-    row_df = pd.DataFrame(columns=row_columns)
+    # Create new DataFrame with only row-wise columns (Ensuring correct column handling)
+    row_df = pd.DataFrame(columns=list(row_columns))  # Fixed the column setting issue
 
     # Save Row CIQ
     row_ciq_path = os.path.join(row_ciq_folder, f"row_{file}")
     row_df.to_excel(row_ciq_path, index=False)
 
 # Save Summary Sheets
-summary_df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in ciq_column_summary.items()]))
+summary_df = pd.DataFrame.from_dict(ciq_column_summary, orient='index').transpose()
 summary_df.to_excel(os.path.join(output_folder, "ciq_summary.xlsx"), index=False)
 
-row_summary_df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in row_ciq_column_summary.items()]))
+row_summary_df = pd.DataFrame.from_dict(row_ciq_column_summary, orient='index').transpose()
 row_summary_df.to_excel(os.path.join(output_folder, "row_ciq_summary.xlsx"), index=False)
 
 print("✅ Summary sheets and row-wise CIQs generated successfully!")
