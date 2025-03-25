@@ -9,11 +9,11 @@ ciq_columns_csv = "./output/ciq_columns_summary.csv"  # CSV containing all colum
 output_folder = "./output/"
 os.makedirs(output_folder, exist_ok=True)
 
-# Load the column names
+# Load the column names with CIQ names as headers
 df = pd.read_csv(ciq_columns_csv)
 
-# Extract column names from each CIQ (columns stored row-wise)
-ciq_column_groups = {f"CIQ_{i+1}": set(df.iloc[:, i].dropna()) for i in range(df.shape[1])}
+# Extract column names for each CIQ using actual CIQ names
+ciq_column_groups = {df.columns[i]: set(df.iloc[:, i].dropna()) for i in range(df.shape[1])}
 
 # Pairwise comparison storage
 pairwise_comparison = []
